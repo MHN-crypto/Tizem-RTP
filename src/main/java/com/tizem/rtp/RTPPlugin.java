@@ -37,7 +37,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
-    private enum Dest { OVERWORLD, NETHER, SPAWN }
+    private enum Dest { OVERWORLD, NETHER, END, SPAWN }
 
     private static class MenuHolder implements InventoryHolder {
         private Inventory inv;
@@ -57,8 +57,6 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
     private final Set<UUID> searching = ConcurrentHashMap.newKeySet();
 
     private String menuTitle;
-    private String overworldName, netherName, spawnWorld;
-    private int ovMin, ovMax, neMin, neMax;
     private int countdown, maxAttempts;
     private boolean cancelOnMove;
     private String prefix, arrow;
@@ -77,14 +75,7 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         menuTitle = getConfig().getString("menu-title", "Random Teleport");
         countdown = getConfig().getInt("countdown", 3);
         cancelOnMove = getConfig().getBoolean("cancel-on-move", true);
-        maxAttempts = Math.max(1, getConfig().getInt("max-attempts", 25));
-        overworldName = getConfig().getString("overworld.world", "world");
-        ovMin = Math.max(0, getConfig().getInt("overworld.min-radius", 500));
-        ovMax = Math.max(ovMin + 1, getConfig().getInt("overworld.max-radius", 5000));
-        netherName = getConfig().getString("nether.world", "world_nether");
-        neMin = Math.max(0, getConfig().getInt("nether.min-radius", 100));
-        neMax = Math.max(neMin + 1, getConfig().getInt("nether.max-radius", 1000));
-        spawnWorld = getConfig().getString("spawn.world", "world");
+        maxAttempts = Math.max(1, getConfig().getInt("max-attempts", 40));
         prefix = getConfig().getString("prefix", "RTP");
         arrow = getConfig().getString("arrow", "»");
         prefixColor = parse(getConfig().getString("prefix-color", "#9DFF1F"));
@@ -110,6 +101,36 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         return line(white("Teleporting in ")
                 .append(Component.text(String.valueOf(n), accentColor))
                 .append(white(" seconds")));
+    }
+
+    private String key(Dest d) {
+        return switch (d) {
+            case OVERWORLD -> "overworld";
+            case NETHER -> "nether";
+            case END -> "end";
+            case SPAWN -> "spawn";
+        };
+    }
+
+    private World.Environment env(Dest d) {
+        return switch (d) {
+            case NETHER -> World.Environment.NETHER;
+            case END -> World.Environment.THE_END;
+            default -> World.Environment.NORMAL;
+        };
+    }
+
+    private World resolve(Dest d) {
+        String name = getConfig().getString(key(d) + ".world", "auto");
+        if (name != null && !name.equalsIgnoreCase("auto")) {
+            World w = Bukkit.getWorld(name);
+            if (w != null) return w;
+        }
+        if (d == Dest.OVERWORLD || d == Dest.SPAWN) return Bukkit.getWorlds().get(0);
+        for (World w : Bukkit.getWorlds()) {
+            if (w.getEnvironment() == env(d)) return w;
+        }
+        return null;
     }
 
     // ---------- command + menu ----------
@@ -141,9 +162,10 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         MenuHolder holder = new MenuHolder();
         Inventory inv = Bukkit.createInventory(holder, 27, Component.text(menuTitle));
         holder.inv = inv;
-        inv.setItem(11, item(Material.MOSS_BLOCK, "Overworld", NamedTextColor.GREEN, "Click to random teleport"));
-        inv.setItem(13, item(Material.NETHER_WART_BLOCK, "Nether", NamedTextColor.RED, "Click to random teleport"));
-        inv.setItem(15, item(Material.END_STONE_BRICKS, "Spawn", NamedTextColor.YELLOW, "Click to teleport to spawn"));
+        inv.setItem(10, item(Material.MOSS_BLOCK, "Overworld", NamedTextColor.GREEN, "Click to random teleport"));
+        inv.setItem(12, item(Material.NETHER_WART_BLOCK, "Nether", NamedTextColor.RED, "Click to random teleport"));
+        inv.setItem(14, item(Material.END_STONE, "The End", NamedTextColor.LIGHT_PURPLE, "Click to random teleport"));
+        inv.setItem(16, item(Material.END_STONE_BRICKS, "Spawn", NamedTextColor.YELLOW, "Click to teleport to spawn"));
         p.openInventory(inv);
     }
 
@@ -165,9 +187,10 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
         if (!(e.getWhoClicked() instanceof Player p)) return;
         Dest d = switch (e.getSlot()) {
-            case 11 -> Dest.OVERWORLD;
-            case 13 -> Dest.NETHER;
-            case 15 -> Dest.SPAWN;
+            case 10 -> Dest.OVERWORLD;
+            case 12 -> Dest.NETHER;
+            case 14 -> Dest.END;
+            case 16 -> Dest.SPAWN;
             default -> null;
         };
         if (d == null) return;
@@ -232,14 +255,13 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
     // ---------- teleporting ----------
 
     private void go(Player p, Dest dest) {
-        if (dest == Dest.SPAWN) {
-            toSpawn(p);
-            return;
-        }
-        String name = dest == Dest.NETHER ? netherName : overworldName;
-        World w = Bukkit.getWorld(name);
+        World w = resolve(dest);
         if (w == null) {
             p.sendMessage(line(white("That world isn't available!")));
+            return;
+        }
+        if (dest == Dest.SPAWN) {
+            toSpawn(p, w);
             return;
         }
         searching.add(p.getUniqueId());
@@ -247,14 +269,14 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         attempt(p, w, dest, 0);
     }
 
-    private void toSpawn(Player p) {
-        World w = Bukkit.getWorld(spawnWorld);
-        if (w == null) w = Bukkit.getWorlds().get(0);
+    private void toSpawn(Player p, World w) {
         Location loc = w.getSpawnLocation().add(0.5, 0, 0.5);
         p.teleportAsync(loc).thenAccept(ok ->
                 Bukkit.getScheduler().runTask(this, () -> {
-                    if (ok && p.isOnline()) {
-                        p.sendMessage(line(white("You have been teleported to spawn!")));
+                    if (p.isOnline()) {
+                        p.sendMessage(line(white(ok
+                                ? "You have been teleported to spawn!"
+                                : "Teleport failed!")));
                     }
                 }));
     }
@@ -271,8 +293,8 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
             return;
         }
 
-        int cfgMin = dest == Dest.NETHER ? neMin : ovMin;
-        int cfgMax = dest == Dest.NETHER ? neMax : ovMax;
+        int cfgMin = Math.max(0, getConfig().getInt(key(dest) + ".min-radius", 500));
+        int cfgMax = Math.max(cfgMin + 1, getConfig().getInt(key(dest) + ".max-radius", 5000));
         WorldBorder border = w.getWorldBorder();
         double hi = Math.min(cfgMax, border.getSize() / 2.0 - 16);
         double lo = Math.min(cfgMin, Math.max(0, hi - 1));
@@ -298,8 +320,10 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
                     p.teleportAsync(target).thenAccept(ok ->
                             Bukkit.getScheduler().runTask(this, () -> {
                                 searching.remove(id);
-                                if (ok && p.isOnline()) {
-                                    p.sendMessage(line(white("You have been randomly teleported!")));
+                                if (p.isOnline()) {
+                                    p.sendMessage(line(white(ok
+                                            ? "You have been randomly teleported!"
+                                            : "Teleport failed!")));
                                 }
                             }));
                 }));

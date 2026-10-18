@@ -5,20 +5,26 @@ countdown: 3
 cancel-on-move: true
 
 # Random spots to try before giving up
-max-attempts: 25
+max-attempts: 40
 
+# world: "auto" finds the world by dimension type. Or put an exact world name.
 overworld:
-  world: world
+  world: auto
   min-radius: 500
   max-radius: 5000
 
 nether:
-  world: world_nether
+  world: auto
   min-radius: 100
   max-radius: 1000
 
+end:
+  world: auto
+  min-radius: 20
+  max-radius: 90
+
 spawn:
-  world: world
+  world: auto
 
 prefix: "RTP"
 prefix-color: "#9DFF1F"
