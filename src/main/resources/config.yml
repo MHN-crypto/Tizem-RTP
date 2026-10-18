@@ -1,16 +1,24 @@
-# World to teleport players into (falls back to the player's current world)
-world: world
-
-# Distance from the world border center
-min-radius: 500
-max-radius: 5000
+menu-title: "Random Teleport"
 
 # Countdown seconds before teleporting
 countdown: 3
 cancel-on-move: true
 
 # Random spots to try before giving up
-max-attempts: 15
+max-attempts: 25
+
+overworld:
+  world: world
+  min-radius: 500
+  max-radius: 5000
+
+nether:
+  world: world_nether
+  min-radius: 100
+  max-radius: 1000
+
+spawn:
+  world: world
 
 prefix: "RTP"
 prefix-color: "#9DFF1F"
