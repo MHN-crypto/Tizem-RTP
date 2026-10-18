@@ -165,10 +165,9 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         MenuHolder holder = new MenuHolder();
         Inventory inv = Bukkit.createInventory(holder, 27, Component.text(menuTitle));
         holder.inv = inv;
-        inv.setItem(10, item(Material.MOSS_BLOCK, "Overworld", NamedTextColor.GREEN, "Click to random teleport"));
-        inv.setItem(12, item(Material.NETHER_WART_BLOCK, "Nether", NamedTextColor.RED, "Click to random teleport"));
-        inv.setItem(14, item(Material.END_STONE, "The End", NamedTextColor.LIGHT_PURPLE, "Click to random teleport"));
-        inv.setItem(16, item(Material.END_STONE_BRICKS, "Spawn", NamedTextColor.YELLOW, "Click to teleport to spawn"));
+        inv.setItem(11, item(Material.MOSS_BLOCK, "Overworld", NamedTextColor.GREEN, "Click to random teleport"));
+        inv.setItem(13, item(Material.NETHER_WART_BLOCK, "Nether", NamedTextColor.RED, "Click to random teleport"));
+        inv.setItem(15, item(Material.END_STONE, "The End", NamedTextColor.LIGHT_PURPLE, "Click to random teleport"));
         p.openInventory(inv);
     }
 
@@ -190,10 +189,9 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         if (e.getClickedInventory() == null || e.getClickedInventory() != e.getView().getTopInventory()) return;
         if (!(e.getWhoClicked() instanceof Player p)) return;
         Dest d = switch (e.getSlot()) {
-            case 10 -> Dest.OVERWORLD;
-            case 12 -> Dest.NETHER;
-            case 14 -> Dest.END;
-            case 16 -> Dest.SPAWN;
+            case 11 -> Dest.OVERWORLD;
+            case 13 -> Dest.NETHER;
+            case 15 -> Dest.END;
             default -> null;
         };
         if (d == null) return;
