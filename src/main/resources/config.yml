@@ -1,0 +1,18 @@
+# World to teleport players into (falls back to the player's current world)
+world: world
+
+# Distance from the world border center
+min-radius: 500
+max-radius: 5000
+
+# Countdown seconds before teleporting
+countdown: 3
+cancel-on-move: true
+
+# Random spots to try before giving up
+max-attempts: 15
+
+prefix: "RTP"
+prefix-color: "#9DFF1F"
+accent-color: "#9DFF1F"
+arrow: "»"

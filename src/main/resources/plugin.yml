@@ -1,0 +1,20 @@
+name: TizemRTP
+version: 1.0.0
+main: com.tizem.rtp.RTPPlugin
+api-version: '1.21'
+description: Random teleport with countdown and safe location search.
+commands:
+  rtp:
+    description: Randomly teleport
+    usage: /rtp
+    aliases: [randomtp, wild]
+permissions:
+  tizem.rtp.use:
+    description: Use /rtp
+    default: true
+  tizem.rtp.bypass:
+    description: Skip the countdown
+    default: false
+  tizem.rtp.admin:
+    description: Use /rtp reload
+    default: op
