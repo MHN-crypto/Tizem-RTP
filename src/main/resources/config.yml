@@ -30,3 +30,6 @@ prefix: "RTP"
 prefix-color: "#9DFF1F"
 accent-color: "#9DFF1F"
 arrow: "»"
+
+# Seconds between random teleports (spawn is not limited)
+rtp-cooldown: 30

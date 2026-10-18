@@ -55,6 +55,8 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
     private final Map<UUID, BukkitTask> pending = new ConcurrentHashMap<>();
     private final Set<UUID> searching = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+    private int cooldownSeconds;
 
     private String menuTitle;
     private int countdown, maxAttempts;
@@ -76,6 +78,7 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
         countdown = getConfig().getInt("countdown", 3);
         cancelOnMove = getConfig().getBoolean("cancel-on-move", true);
         maxAttempts = Math.max(1, getConfig().getInt("max-attempts", 40));
+        cooldownSeconds = Math.max(0, getConfig().getInt("rtp-cooldown", 30));
         prefix = getConfig().getString("prefix", "RTP");
         arrow = getConfig().getString("arrow", "»");
         prefixColor = parse(getConfig().getString("prefix-color", "#9DFF1F"));
@@ -207,6 +210,18 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
 
     private void startCountdown(Player p, Dest dest) {
         UUID id = p.getUniqueId();
+        if (dest != Dest.SPAWN && !p.hasPermission("tizem.rtp.bypass")) {
+            Long last = cooldowns.get(id);
+            if (last != null) {
+                long left = cooldownSeconds * 1000L - (System.currentTimeMillis() - last);
+                if (left > 0) {
+                    p.sendMessage(line(white("Please wait ")
+                            .append(Component.text(((left + 999) / 1000) + "s", accentColor))
+                            .append(white(" before using RTP again!"))));
+                    return;
+                }
+            }
+        }
         if (pending.containsKey(id) || searching.contains(id)) {
             p.sendMessage(line(white("You are already teleporting!")));
             return;
@@ -317,6 +332,7 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
                     }
                     Location target = new Location(w, x + 0.5, y + 1, z + 0.5,
                             p.getLocation().getYaw(), p.getLocation().getPitch());
+                    cooldowns.put(id, System.currentTimeMillis());
                     p.teleportAsync(target).thenAccept(ok ->
                             Bukkit.getScheduler().runTask(this, () -> {
                                 searching.remove(id);
