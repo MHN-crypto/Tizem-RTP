@@ -20,8 +20,9 @@ nether:
 
 end:
   world: auto
-  min-radius: 20
-  max-radius: 90
+  min-radius: 1000
+  max-radius: 10000
+  max-attempts: 150
 
 spawn:
   world: auto

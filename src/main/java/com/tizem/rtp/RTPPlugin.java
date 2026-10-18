@@ -51,7 +51,7 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
             Material.LAVA, Material.WATER, Material.CACTUS, Material.MAGMA_BLOCK,
             Material.FIRE, Material.SOUL_FIRE, Material.CAMPFIRE, Material.SOUL_CAMPFIRE,
             Material.SWEET_BERRY_BUSH, Material.POWDER_SNOW, Material.POINTED_DRIPSTONE,
-            Material.WITHER_ROSE);
+            Material.WITHER_ROSE, Material.CHORUS_PLANT, Material.CHORUS_FLOWER);
 
     private final Map<UUID, BukkitTask> pending = new ConcurrentHashMap<>();
     private final Set<UUID> searching = ConcurrentHashMap.newKeySet();
@@ -300,7 +300,8 @@ public class RTPPlugin extends JavaPlugin implements CommandExecutor, Listener {
             searching.remove(id);
             return;
         }
-        if (tries >= maxAttempts) {
+        int limit = dest == Dest.END ? Math.max(maxAttempts, getConfig().getInt("end.max-attempts", 150)) : maxAttempts;
+        if (tries >= limit) {
             searching.remove(id);
             p.sendMessage(line(white("Couldn't find a safe location, try again!")));
             return;
